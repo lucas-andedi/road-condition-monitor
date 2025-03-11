@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Raspberry Pi</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --background: #0a1929;
+            --card-bg: #132f4c;
+            --accent: #0088ff;
+            --text: #ffffff;
+            --text-secondary: #94a3b8;
+            --border: #1e4976;
+            --good: #4caf50;
+            --fair: #ff9800;
+            --bad: #f44336;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 60px;
+            background-color: var(--card-bg);
+            border-right: 1px solid var(--border);
+            padding: 1rem 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .sidebar-icon {
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .sidebar-icon:hover, .sidebar-icon.active {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+        }
+
+        .sidebar-icon.active {
+            color: var(--accent);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .title-section h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr;
+            gap: 1.5rem;
+        }
+
+        .card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .card.left-column {
+            grid-column: 1;
+        }
+
+        .card.right-column {
+            grid-column: 2;
+            grid-row: 1 / 3;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .chart-title {
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .status-indicator {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .good {
+            background-color: rgba(76, 175, 80, 0.2);
+            color: var(--good);
+        }
+
+        .fair {
+            background-color: rgba(255, 152, 0, 0.2);
+            color: var(--fair);
+        }
+
+        .bad {
+            background-color: rgba(244, 67, 54, 0.2);
+            color: var(--bad);
+        }
+
+        .road-condition-indicator {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .road-condition-good {
+            background-color: rgba(76, 175, 80, 0.2);
+            color: var(--good);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .road-condition-fair {
+            background-color: rgba(255, 152, 0, 0.2);
+            color: var(--fair);
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .road-condition-bad {
+            background-color: rgba(244, 67, 54, 0.2);
+            color: var(--bad);
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 1rem;
+        }
+
+        .data-card {
+            display: flex;
+            flex-direction: column;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 0.75rem;
+        }
+
+        .data-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .data-value {
+            font-size: 1.25rem;
+            font-weight: 500;
+        }
+
+        .unit {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-left: 0.25rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: var(--card-bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        #map {
+            height: 300px;
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .card.right-column {
+                grid-column: 1;
+                grid-row: auto;
+            }
+        }
+
+        .accel-chart-container {
+            height: 300px;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        <a href="/" class="sidebar-icon active"><i class="material-icons">dashboard</i></a>
+        <a href="/history" class="sidebar-icon"><i class="material-icons">history</i></a>
+        <i class="material-icons sidebar-icon">analytics</i>
+        <i class="material-icons sidebar-icon">settings</i>
+    </nav>
+
+    <main class="main-content">
+        <div class="header">
+            <div class="title-section">
+                <h1>Tableau de bord</h1>
+                <p class="text-secondary">Surveillance des capteurs en temps réel</p>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-secondary" id="export-btn">
+                    <i class="material-icons">save_alt</i>
+                    Générer un rapport
+                </button>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="card left-column">
+                <div class="chart-header">
+                    <span class="chart-title">État de la Route</span>
+                    <div class="status-indicator" id="road-status">--</div>
+                </div>
+                <div class="data-grid">
+                    <div class="data-card">
+                        <span class="data-label">Accéléromètre X</span>
+                        <span class="data-value" id="accel-x">--<span class="unit">m/s²</span></span>
+                    </div>
+                    <div class="data-card">
+                        <span class="data-label">Accéléromètre Y</span>
+                        <span class="data-value" id="accel-y">--<span class="unit">m/s²</span></span>
+                    </div>
+                    <div class="data-card">
+                        <span class="data-label">Accéléromètre Z</span>
+                        <span class="data-value" id="accel-z">--<span class="unit">m/s²</span></span>
+                    </div>
+                </div>
+                <div class="road-condition-indicator" id="road-condition-box">
+                    État de la route : <span id="road-condition-text">--</span>
+                </div>
+            </div>
+            
+            <div class="card right-column">
+                <div class="chart-header">
+                    <span class="chart-title">Localisation GPS</span>
+                </div>
+                <div class="data-grid">
+                    <div class="data-card">
+                        <span class="data-label">Latitude</span>
+                        <span class="data-value" id="lat">--</span>
+                    </div>
+                    <div class="data-card">
+                        <span class="data-label">Longitude</span>
+                        <span class="data-value" id="lon">--</span>
+                    </div>
+                    <div class="data-card">
+                        <span class="data-label">Altitude</span>
+                        <span class="data-value" id="alt">--<span class="unit">m</span></span>
+                    </div>
+                    <div class="data-card">
+                        <span class="data-label">Satellites</span>
+                        <span class="data-value" id="satellites">--</span>
+                    </div>
+                </div>
+                <div id="map"></div>
+            </div>
+
+            <div class="card full-width">
+                <div class="chart-header">
+                    <span class="chart-title">Graphique de l'Accéléromètre</span>
+                    <span id="last-update">Dernière mise à jour: --</span>
+                </div>
+                <div class="accel-chart-container">
+                    <canvas id="accelerometer-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDwLqXoj3mGr5MCtTu1CF0WB8cNE7T0sck&callback=initMap" async defer></script>
+    <script>
+        let map;
+        let marker;
+        let socket;
+        let accelerometerChart;
+        const MAX_DATA_POINTS = 50;
+        const chartData = {
+            labels: [],
+            datasets: [
+                {
+                    label: 'X',
+                    data: [],
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    tension: 0.3
+                },
+                {
+                    label: 'Y',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    tension: 0.3
+                },
+                {
+                    label: 'Z',
+                    data: [],
+                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                    tension: 0.3
+                }
+            ]
+        };
+
+        // Ajouter après la déclaration des variables globales (après la déclaration de chartData)
+        let pathCoordinates = [];
+        let pathLine = null;
+        let markers = [];
+        const MAX_PATH_POINTS = 100; // Nombre maximum de points à conserver dans le chemin
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: {lat: 45.5, lng: 1.5}, // Centre sur la France par défaut
+                zoom: 15,
+                styles: [
+                    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+                    { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+                    { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+                    {
+                        featureType: "administrative.locality",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#d59563" }],
+                    },
+                    {
+                        featureType: "poi",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#d59563" }],
+                    },
+                    {
+                        featureType: "poi.park",
+                        elementType: "geometry",
+                        stylers: [{ color: "#263c3f" }],
+                    },
+                    {
+                        featureType: "poi.park",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#6b9a76" }],
+                    },
+                    {
+                        featureType: "road",
+                        elementType: "geometry",
+                        stylers: [{ color: "#38414e" }],
+                    },
+                    {
+                        featureType: "road",
+                        elementType: "geometry.stroke",
+                        stylers: [{ color: "#212a37" }],
+                    },
+                    {
+                        featureType: "road",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#9ca5b3" }],
+                    },
+                    {
+                        featureType: "road.highway",
+                        elementType: "geometry",
+                        stylers: [{ color: "#746855" }],
+                    },
+                    {
+                        featureType: "road.highway",
+                        elementType: "geometry.stroke",
+                        stylers: [{ color: "#1f2835" }],
+                    },
+                    {
+                        featureType: "road.highway",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#f3d19c" }],
+                    },
+                    {
+                        featureType: "transit",
+                        elementType: "geometry",
+                        stylers: [{ color: "#2f3948" }],
+                    },
+                    {
+                        featureType: "transit.station",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#d59563" }],
+                    },
+                    {
+                        featureType: "water",
+                        elementType: "geometry",
+                        stylers: [{ color: "#17263c" }],
+                    },
+                    {
+                        featureType: "water",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#515c6d" }],
+                    },
+                    {
+                        featureType: "water",
+                        elementType: "labels.text.stroke",
+                        stylers: [{ color: "#17263c" }],
+                    },
+                ]
+            });
+        }
+
+        function initAccelerometerChart() {
+            const ctx = document.getElementById('accelerometer-chart').getContext('2d');
+            accelerometerChart = new Chart(ctx, {
+                type: 'line',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 0 // Désactiver l'animation pour plus de fluidité
+                    },
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)',
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                maxRotation: 0,
+                                callback: function(value, index, values) {
+                                    // Afficher moins d'étiquettes sur l'axe X
+                                    if (index % 5 === 0) return this.getLabelForValue(value);
+                                    return '';
+                                }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)',
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: 'rgba(255, 255, 255, 0.7)'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            titleFont: {
+                                weight: 'bold'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateAccelerometerChart(data) {
+            // Ajouter un nouveau point de données avec un timestamp
+            const now = new Date();
+            const timeLabel = now.getHours().toString().padStart(2, '0') + ':' + 
+                             now.getMinutes().toString().padStart(2, '0') + ':' + 
+                             now.getSeconds().toString().padStart(2, '0');
+            
+            chartData.labels.push(timeLabel);
+            chartData.datasets[0].data.push(data.x);
+            chartData.datasets[1].data.push(data.y);
+            chartData.datasets[2].data.push(data.z);
+            
+            // Limiter le nombre de points de données pour éviter que le graphique ne devienne trop encombré
+            if (chartData.labels.length > MAX_DATA_POINTS) {
+                chartData.labels.shift();
+                chartData.datasets.forEach(dataset => dataset.data.shift());
+            }
+            
+            // Mettre à jour le graphique
+            accelerometerChart.update();
+        }
+
+        // Mise à jour de l'interface utilisateur avec les données de capteur
+        function updateSensorDisplay(data) {
+            if (data.accelerometer) {
+                // Vérifier si les données sont déjà converties ou si ce sont des valeurs brutes
+                let accelX, accelY, accelZ;
+                
+                if ('x' in data.accelerometer && 'y' in data.accelerometer && 'z' in data.accelerometer) {
+                    // Utiliser directement les valeurs si elles sont déjà en m/s²
+                    if ('x_raw' in data.accelerometer) {
+                        // Nouvelles données avec valeurs brutes et converties
+                        accelX = data.accelerometer.x;
+                        accelY = data.accelerometer.y;
+                        accelZ = data.accelerometer.z;
+                    } else {
+                        // Anciennes données - vérifier si conversion nécessaire
+                        // Si les valeurs sont grandes, ce sont probablement des valeurs brutes
+                        accelX = Math.abs(data.accelerometer.x) > 100 ? 
+                            (data.accelerometer.x / 16384.0) * 9.81 : data.accelerometer.x;
+                        accelY = Math.abs(data.accelerometer.y) > 100 ? 
+                            (data.accelerometer.y / 16384.0) * 9.81 : data.accelerometer.y;
+                        accelZ = Math.abs(data.accelerometer.z) > 100 ? 
+                            (data.accelerometer.z / 16384.0) * 9.81 : data.accelerometer.z;
+                    }
+                } else {
+                    // Aucune donnée valide
+                    accelX = accelY = accelZ = 0;
+                }
+                
+                // Afficher les valeurs converties
+                document.getElementById('accel-x').innerHTML = formatValue(accelX) + '<span class="unit">m/s²</span>';
+                document.getElementById('accel-y').innerHTML = formatValue(accelY) + '<span class="unit">m/s²</span>';
+                document.getElementById('accel-z').innerHTML = formatValue(accelZ) + '<span class="unit">m/s²</span>';
+                
+                // Mettre à jour le graphique de l'accéléromètre avec les valeurs converties
+                updateAccelerometerChart({
+                    x: accelX,
+                    y: accelY,
+                    z: accelZ
+                });
+                
+                // Déterminer l'état de la route
+                // Utiliser la valeur brute si disponible, sinon reconvertir approximativement
+                let yAccel;
+                if ('y_raw' in data.accelerometer) {
+                    yAccel = Math.abs(data.accelerometer.y_raw);
+                } else {
+                    // Si c'est une valeur en m/s², la reconvertir en valeur brute pour la comparaison
+                    yAccel = Math.abs(accelY) * 16384.0 / 9.81;
+                }
+                
+                let roadStatus = 'good';
+                let roadStatusText = 'BON';
+                if (yAccel > 15000) {
+                    roadStatus = 'bad';
+                    roadStatusText = 'MAUVAIS';
+                } else if (yAccel > 10000) {
+                    roadStatus = 'fair';
+                    roadStatusText = 'MOYEN';
+                }
+                
+                // Mettre à jour l'indicateur d'état de la route
+                const statusElement = document.getElementById('road-status');
+                statusElement.className = 'status-indicator ' + roadStatus;
+                statusElement.textContent = roadStatusText;
+                
+                // Mettre à jour le nouvel indicateur d'état de route
+                const roadConditionBox = document.getElementById('road-condition-box');
+                roadConditionBox.className = 'road-condition-indicator road-condition-' + roadStatus;
+                document.getElementById('road-condition-text').textContent = roadStatusText;
+            }
+            
+            // Le reste de la fonction reste inchangé
+            if (data.gps) {
+                document.getElementById('lat').textContent = formatValue(data.gps.latitude, 6);
+                document.getElementById('lon').textContent = formatValue(data.gps.longitude, 6);
+                document.getElementById('alt').innerHTML = formatValue(data.gps.altitude) + '<span class="unit">m</span>';
+                document.getElementById('satellites').textContent = data.gps.satellites || '--';
+                
+                // Mettre à jour la carte si les coordonnées sont valides
+                if (data.gps.latitude && data.gps.longitude) {
+                    updateMapPosition(data.gps.latitude, data.gps.longitude);
+                }
+            }
+            
+            // Mettre à jour l'horodatage
+            document.getElementById('last-update').textContent = 'Dernière mise à jour: ' + new Date().toLocaleTimeString();
+        }
+
+        function formatValue(value, decimals = 2) {
+            if (value === null || value === undefined) return '--';
+            return typeof value === 'number' ? value.toFixed(decimals) : value;
+        }
+
+        // Remplacer la fonction updateMapPosition par celle-ci
+        function updateMapPosition(lat, lng) {
+            const position = new google.maps.LatLng(lat, lng);
+            map.setCenter(position);
+            
+            // Ajouter le point au chemin
+            pathCoordinates.push(position);
+            
+            // Limiter le nombre de points dans le chemin
+            if (pathCoordinates.length > MAX_PATH_POINTS) {
+                pathCoordinates.shift();
+            }
+            
+            // Créer ou mettre à jour la ligne du chemin
+            if (pathLine) {
+                pathLine.setPath(pathCoordinates);
+            } else {
+                pathLine = new google.maps.Polyline({
+                    path: pathCoordinates,
+                    geodesic: true,
+                    strokeColor: '#0088ff',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 3,
+                    map: map
+                });
+            }
+            
+            // Ajouter un marqueur pour le point actuel
+            const marker = new google.maps.Marker({
+                position: position,
+                map: map,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 7,
+                    fillColor: getMarkerColor(lat, lng),
+                    fillOpacity: 0.7,
+                    strokeWeight: 1,
+                    strokeColor: '#FFFFFF',
+                }
+            });
+            
+            // Ajouter le marqueur à la liste
+            markers.push(marker);
+            
+            // Limiter le nombre de marqueurs affichés
+            if (markers.length > MAX_PATH_POINTS) {
+                const oldMarker = markers.shift();
+                oldMarker.setMap(null); // Supprimer le marqueur de la carte
+            }
+            
+            // Mettre à jour le marqueur principal (position actuelle)
+            if (!marker) {
+                marker = new google.maps.Marker({
+                    position: position,
+                    map: map,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 10,
+                        fillColor: '#0088ff',
+                        fillOpacity: 0.7,
+                        strokeWeight: 2,
+                        strokeColor: '#FFFFFF',
+                    }
+                });
+            } else {
+                marker.setPosition(position);
+            }
+        }
+
+        // Ajouter cette nouvelle fonction pour déterminer la couleur du marqueur en fonction de l'état de la route
+        function getMarkerColor(lat, lng) {
+            // Utiliser l'état de la route actuel pour déterminer la couleur
+            const roadStatus = document.getElementById('road-status').className;
+            if (roadStatus.includes('good')) {
+                return '#4caf50'; // Vert
+            } else if (roadStatus.includes('fair')) {
+                return '#ff9800'; // Orange
+            } else if (roadStatus.includes('bad')) {
+                return '#f44336'; // Rouge
+            } else {
+                return '#0088ff'; // Bleu par défaut
+            }
+        }
+
+        document.getElementById('export-btn').addEventListener('click', function() {
+            // Utiliser le timestamp actuel pour le rapport
+            const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+            window.location.href = `/generate-report/${encodeURIComponent(timestamp)}`;
+        });
+
+        window.onload = function() {
+            // Initialiser le graphique de l'accéléromètre
+            initAccelerometerChart();
+            
+            // Connecter à websocket
+            socket = io();
+            
+            socket.on('sensor_update', function(data) {
+                if (data.sensor_data) {
+                    updateSensorDisplay(data.sensor_data);
+                }
+            });
+        };
+    </script>
+</body>
+</html>
+

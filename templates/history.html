@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historique des Données - Raspberry Pi</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {
+            --background: #0a1929;
+            --card-bg: #132f4c;
+            --accent: #0088ff;
+            --text: #ffffff;
+            --text-secondary: #94a3b8;
+            --border: #1e4976;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 60px;
+            background-color: var(--card-bg);
+            border-right: 1px solid var(--border);
+            padding: 1rem 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .sidebar-icon {
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .sidebar-icon:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .title-section h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .filter-input {
+            padding: 0.5rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background-color: var(--card-bg);
+            color: var(--text);
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: #00a854;
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: var(--card-bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .chart-title {
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        #map {
+            height: 600px;
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        .legend {
+            background-color: var(--card-bg);
+            padding: 10px;
+            margin: 10px;
+            border-radius: 5px;
+            border: 1px solid var(--border);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            color: var(--text);
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 50%;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-card {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        #map-status {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        <a href="/" class="sidebar-icon"><i class="material-icons">dashboard</i></a>
+        <a href="/history" class="sidebar-icon"><i class="material-icons">history</i></a>
+        <i class="material-icons sidebar-icon">analytics</i>
+        <i class="material-icons sidebar-icon">settings</i>
+    </nav>
+
+    <main class="main-content">
+        <div class="header">
+            <div class="title-section">
+                <h1>Historique des Données</h1>
+                <p class="text-secondary">Consultez l'historique des états de route et des données des capteurs</p>
+            </div>
+        </div>
+
+        <div class="filters">
+            <div class="filter-group">
+                <label class="filter-label">Date de début</label>
+                <input type="datetime-local" id="start-date" class="filter-input">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Date de fin</label>
+                <input type="datetime-local" id="end-date" class="filter-input">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">État de la route</label>
+                <select id="condition-filter" class="filter-input">
+                    <option value="">Tous</option>
+                    <option value="good">Bon</option>
+                    <option value="fair">Moyen</option>
+                    <option value="bad">Mauvais</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Limite</label>
+                <input type="number" id="limit-filter" class="filter-input" value="1000" min="1" max="10000">
+            </div>
+            <div class="filter-group" style="justify-content: flex-end;">
+                <button id="apply-filters" class="btn btn-primary">
+                    <i class="material-icons">filter_list</i>
+                    Appliquer les filtres
+                </button>
+                <button id="export-csv" class="btn btn-secondary">
+                    <i class="material-icons">file_download</i>
+                    Exporter CSV
+                </button>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="chart-header">
+                    <span class="chart-title">Historique des États de Route</span>
+                    <div id="map-status"></div>
+                </div>
+                <div id="map"></div>
+            </div>
+
+            <div class="card">
+                <div class="chart-header">
+                    <span class="chart-title">Statistiques</span>
+                </div>
+                <div class="stats-grid" id="statistics">
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-records">--</div>
+                        <div class="stat-label">Enregistrements</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="good-roads">--</div>
+                        <div class="stat-label">Routes en bon état</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="fair-roads">--</div>
+                        <div class="stat-label">Routes en état moyen</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="bad-roads">--</div>
+                        <div class="stat-label">Routes en mauvais état</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDwLqXoj3mGr5MCtTu1CF0WB8cNE7T0sck&callback=initMap" async defer></script>
+    <script>
+        let map;
+        let roadConditionMarkers = [];
+
+        function initMap() {
+            console.log("Initialisation de la carte...");
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: {lat: 45.5, lng: 1.5}, // Centrer sur la France par défaut
+                zoom: 8,
+                styles: [
+                    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+                    { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+                    { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+                    {
+                        featureType: "administrative.locality",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#d59563" }],
+                    },
+                    {
+                        featureType: "poi",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#d59563" }],
+                    },
+                    {
+                        featureType: "poi.park",
+                        elementType: "geometry",
+                        stylers: [{ color: "#263c3f" }],
+                    },
+                    {
+                        featureType: "poi.park",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#6b9a76" }],
+                    },
+                    {
+                        featureType: "road",
+                        elementType: "geometry",
+                        stylers: [{ color: "#38414e" }],
+                    },
+                    {
+                        featureType: "road",
+                        elementType: "geometry.stroke",
+                        stylers: [{ color: "#212a37" }],
+                    },
+                    {
+                        featureType: "road",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#9ca5b3" }],
+                    },
+                    {
+                        featureType: "road.highway",
+                        elementType: "geometry",
+                        stylers: [{ color: "#746855" }],
+                    },
+                    {
+                        featureType: "road.highway",
+                        elementType: "geometry.stroke",
+                        stylers: [{ color: "#1f2835" }],
+                    },
+                    {
+                        featureType: "road.highway",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#f3d19c" }],
+                    },
+                    {
+                        featureType: "transit",
+                        elementType: "geometry",
+                        stylers: [{ color: "#2f3948" }],
+                    },
+                    {
+                        featureType: "transit.station",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#d59563" }],
+                    },
+                    {
+                        featureType: "water",
+                        elementType: "geometry",
+                        stylers: [{ color: "#17263c" }],
+                    },
+                    {
+                        featureType: "water",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#515c6d" }],
+                    },
+                    {
+                        featureType: "water",
+                        elementType: "labels.text.stroke",
+                        stylers: [{ color: "#17263c" }],
+                    },
+                ]
+            });
+
+            // Add legend to the map
+            const legend = document.createElement('div');
+            legend.className = 'legend';
+            legend.innerHTML = `
+                <div class="legend-item"><div class="legend-color" style="background-color: green;"></div>Bon état</div>
+                <div class="legend-item"><div class="legend-color" style="background-color: orange;"></div>État moyen</div>
+                <div class="legend-item"><div class="legend-color" style="background-color: red;"></div>Mauvais état</div>
+            `;
+            map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legend);
+            
+            // Charger les données initiales
+            loadRoadHistory();
+        }
+
+        function updateRoadConditionMarkers(history) {
+            console.log("Mise à jour des marqueurs avec", history.length, "points");
+            
+            // Remove old markers
+            roadConditionMarkers.forEach(marker => marker.setMap(null));
+            roadConditionMarkers = [];
+
+            if (!history || history.length === 0) {
+                document.getElementById('map-status').textContent = "Aucune donnée à afficher";
+                return;
+            }
+
+            document.getElementById('map-status').textContent = "";
+
+            // Add new markers
+            const bounds = new google.maps.LatLngBounds();
+            let hasValidCoordinates = false;
+            
+            history.forEach(point => {
+                // Vérifier que les coordonnées sont valides
+                if (!point.latitude || !point.longitude || 
+                    isNaN(point.latitude) || isNaN(point.longitude)) {
+                    return;
+                }
+                
+                const color = point.condition === 'good' ? 'green' : 
+                              point.condition === 'fair' ? 'orange' : 'red';
+                
+                const latLng = {lat: parseFloat(point.latitude), lng: parseFloat(point.longitude)};
+                bounds.extend(latLng);
+                hasValidCoordinates = true;
+                
+                const marker = new google.maps.Marker({
+                    position: latLng,
+                    map: map,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 5,
+                        fillColor: color,
+                        fillOpacity: 0.7,
+                        strokeWeight: 1,
+                        strokeColor: "#FFFFFF",
+                    },
+                    title: `État: ${point.condition} - ${new Date(point.timestamp).toLocaleString()}`
+                });
+                
+                roadConditionMarkers.push(marker);
+            });
+            
+            // Ajuster la carte pour montrer tous les marqueurs
+            if (hasValidCoordinates) {
+                map.fitBounds(bounds);
+            } else {
+                document.getElementById('map-status').textContent = "Aucune coordonnée GPS valide trouvée";
+            }
+        }
+
+        function loadRoadHistory() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const condition = document.getElementById('condition-filter').value;
+            const limit = document.getElementById('limit-filter').value;
+            
+            let url = `/api/road-history?limit=${limit}`;
+            if (startDate) url += `&start_date=${startDate}`;
+            if (endDate) url += `&end_date=${endDate}`;
+            if (condition) url += `&condition=${condition}`;
+            
+            console.log("Chargement des données depuis:", url);
+            document.getElementById('map-status').textContent = "Chargement des données...";
+            
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Données reçues:", data);
+                    updateRoadConditionMarkers(data);
+                })
+                .catch(error => {
+                    console.error('Error loading road history:', error);
+                    document.getElementById('map-status').textContent = "Erreur lors du chargement des données";
+                });
+        }
+
+        function loadStatistics() {
+            fetch('/api/statistics')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-records').textContent = data.total_records || 0;
+                    document.getElementById('good-roads').textContent = data.road_conditions.good || 0;
+                    document.getElementById('fair-roads').textContent = data.road_conditions.fair || 0;
+                    document.getElementById('bad-roads').textContent = data.road_conditions.bad || 0;
+                })
+                .catch(error => {
+                    console.error('Error loading statistics:', error);
+                });
+        }
+
+        // Initialiser les filtres avec des valeurs par défaut
+        function initFilters() {
+            const now = new Date();
+            const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            
+            document.getElementById('end-date').value = now.toISOString().slice(0, 16);
+            document.getElementById('start-date').value = oneWeekAgo.toISOString().slice(0, 16);
+        }
+
+        document.getElementById('apply-filters').addEventListener('click', function() {
+            loadRoadHistory();
+        });
+
+        document.getElementById('export-csv').addEventListener('click', function() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const condition = document.getElementById('condition-filter').value;
+            const limit = document.getElementById('limit-filter').value;
+            
+            let url = `/api/export-csv?limit=${limit}`;
+            if (startDate) url += `&start_date=${startDate}`;
+            if (endDate) url += `&end_date=${endDate}`;
+            if (condition) url += `&condition=${condition}`;
+            
+            window.location.href = url;
+        });
+
+        // Initialisation au chargement de la page
+        window.onload = () => {
+            initFilters();
+            loadStatistics();
+            // Note: initMap est appelé par le callback de l'API Google Maps
+        };
+    </script>
+</body>
+</html>

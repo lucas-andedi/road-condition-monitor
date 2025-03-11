@@ -1,0 +1,120 @@
+## Comment utiliser ce script d'installation complet
+
+J'ai créé deux fichiers:
+
+1. **setup_sensor_monitor.sh** - Un script d'installation complet qui fait tout en une seule fois
+2. **Jean_autostart.py** - Une version améliorée de votre script avec démarrage automatique intégré
+
+
+### Étapes d'installation:
+
+1. **Copiez les deux fichiers sur votre Raspberry Pi**
+
+```shellscript
+# Créez un dossier pour votre application (si ce n'est pas déjà fait)
+mkdir -p ~/sensor_monitor
+cd ~/sensor_monitor
+
+# Copiez les fichiers (ou créez-les avec nano)
+# Copiez setup_sensor_monitor.sh et Jean_autostart.py ici
+```
+
+
+2. **Rendez le script d'installation exécutable**
+
+```shellscript
+chmod +x setup_sensor_monitor.sh
+```
+
+
+3. **Exécutez le script d'installation**
+
+```shellscript
+./setup_sensor_monitor.sh
+```
+
+
+
+
+### Ce que fait le script d'installation:
+
+1. **Installe toutes les dépendances nécessaires**
+
+1. Python3, pip, i2c-tools, sqlite3
+2. Bibliothèques Python: smbus2, pyserial, requests
+
+
+
+2. **Active l'interface I2C** si elle n'est pas déjà activée
+3. **Configure le script Python**
+
+1. Le rend exécutable
+2. Ajoute la ligne shebang si nécessaire
+
+
+
+4. **Crée et configure un service systemd**
+
+1. Crée le fichier de service dans /etc/systemd/system/
+2. Configure le service pour redémarrer automatiquement en cas d'échec
+
+
+
+5. **Active et démarre le service**
+
+1. Le service démarre immédiatement
+2. Le service démarrera automatiquement à chaque démarrage du Raspberry Pi
+
+
+
+6. **Configure la journalisation**
+
+1. Crée un fichier de log
+2. Configure les permissions appropriées
+
+
+
+
+
+### Améliorations du script Python:
+
+Le script `Jean_autostart.py` inclut plusieurs améliorations:
+
+1. **Mode simulation automatique**
+
+1. Si les capteurs ne sont pas disponibles, il génère des données simulées
+2. Utile pour tester sans matériel connecté
+
+
+
+2. **Gestion robuste des erreurs**
+
+1. Capture et journalise toutes les erreurs
+2. Récupère automatiquement après les erreurs
+
+
+
+3. **Chemins absolus pour les fichiers**
+
+1. Utilise des chemins absolus pour la base de données et les logs
+2. Fonctionne quel que soit le répertoire de travail
+
+
+
+4. **Gestionnaire de signaux**
+
+1. Arrête proprement le programme en cas de signal d'arrêt
+2. Ferme correctement les ressources
+
+
+
+5. **Messages de démarrage clairs**
+
+1. Affiche des informations utiles au démarrage
+2. Indique où trouver les logs
+
+
+
+
+
+Ce système complet garantit que votre application démarre automatiquement au démarrage du Raspberry Pi, fonctionne de manière fiable, et synchronise les données dès que la connexion est disponible.
